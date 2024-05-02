@@ -33,7 +33,7 @@ def refreshCredentials():
     rJson = response.json()
     #a timestamp serve para ajudar a gerar outro access token caso o anterior tenha expirado
     rJson['timestamp'] = datetime.strftime(datetime.now(),"%Y-%m-%d %H:%M:%S")
-    with open('apiToken.json', 'w', encoding="utf-8") as file:
+    with open('./apiToken.json', 'w', encoding="utf-8") as file:
         json.dump(rJson,file,indent=4)
 
 def getGames(accessToken,currentOffset,clientID):
@@ -49,8 +49,12 @@ def getGames(accessToken,currentOffset,clientID):
     #print(data)
     return data
 
-def dataTreatment():
-    return 0
+#o propósito dessa função é captar tabelas que auxiliem no enriquecimento dos dados de algum modo como, por exemplo, a tabela de consoles/plataformas
+def getAuxiliaryTables(accessToken, clientID, tableName):
+    response = post(f'https://api.igdb.com/v4/{tableName}', **{'headers': {'Client-ID': f'{clientID}', 'Authorization': f'{accessToken}'},\
+                                                              'data': f'fields name, id;limit 500;'})
+    data = response.json()
+    return data
 
 def main():
     creds = getCredentials()
@@ -58,6 +62,14 @@ def main():
     accessToken = creds[1]
     accessToken = "Bearer " + accessToken
     accessToken = accessToken.strip()
+
+    auxTables = ['platforms', 'genres', 'game_modes']
+
+    for table in auxTables:
+        rawTable = getAuxiliaryTables(accessToken, clientID, table)
+        df = pd.DataFrame(rawTable)
+        df.to_csv(f'./{table}.csv',index=False)
+
     resCount = post('https://api.igdb.com/v4/games/count', **{'headers': {'Client-ID': f'{clientID}', 'Authorization': f'{accessToken}'},\
                                                               'data': 'where category = (0,8,9) & first_release_date>946692060 & version_parent=null & genres != null & platforms != (34,82,238,405,74,39,55) & keywords.name != ("fangame","nonofficial","homebrew");'})
     
@@ -90,9 +102,9 @@ def main():
         sleep(3)
         df = pd.DataFrame(array)
         if currentOffset == 0:
-            df.to_csv('rawGamesData.csv',mode='a',index=False,na_rep="empty")
+            df.to_csv('./rawGamesData.csv',mode='a',index=False,na_rep="empty")
         else:
-            df.to_csv('rawGamesData.csv',mode='a',index=False,header=False,na_rep="empty")
+            df.to_csv('./rawGamesData.csv',mode='a',index=False,header=False,na_rep="empty")
         #o offset serve para paginar as requests - há um limite de "tamanho" de request na API
         currentOffset = currentOffset+500
         print(currentOffset)
