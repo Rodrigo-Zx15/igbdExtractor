@@ -111,5 +111,11 @@ def main():
         print(df.head(3))
     #print(len(data))
 if __name__ == "__main__":
+    inputClient = input('Insira seu client id:\n')
+    inputSecret = input('Insira seu client secret:\n')
+    df = pd.DataFrame(data=[{
+        'client_id': inputClient,
+        'client_secret': inputSecret}])
+    df.to_csv('./apiAccess.csv',sep=';',index=False)
     main()
     
